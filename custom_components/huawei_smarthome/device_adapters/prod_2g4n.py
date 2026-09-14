@@ -99,6 +99,25 @@ def _bool(value: Any) -> bool | None:
     return None
 
 
+def _number(value: Any) -> int | float | None:
+    """Return a numeric reading, or None when the value is not one.
+
+    ``_alarm_sensor_spec`` falls back to this when the Profile enum has no
+    label for the value the device reported.  The alarm fields are declared as
+    ``0/1`` but the cloud has been seen to deliver them as strings, so the
+    fallback has to reduce either shape to a number rather than show a raw
+    string.
+    """
+
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(result) if result.is_integer() else result
+
+
 def _switch_spec(
     profile: Mapping[str, Any],
     sid: str,
