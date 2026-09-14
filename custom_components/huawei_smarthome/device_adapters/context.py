@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import replace
+from datetime import datetime
 from typing import Any
 
 from ..domain.models import (
     RemoteDeviceDescriptor,
     RemoteServiceState,
     is_older_remote_timestamp,
+    parse_remote_timestamp,
 )
 from ..mqtt.commands import HuaweiCommandGateway
 from ..mqtt.protocol import decode_message
@@ -91,6 +93,12 @@ class DeviceContext:
 
     def service_state(self, sid: str) -> Mapping[str, Any]:
         return dict(self._state.get(sid, {}))
+
+    def service_updated_at(self, sid: str) -> datetime | None:
+        """Return the last device-reported update time for one service."""
+
+        timestamp = self._timestamps.get(sid)
+        return parse_remote_timestamp(timestamp) if timestamp else None
 
     async def async_send_service(
         self,
