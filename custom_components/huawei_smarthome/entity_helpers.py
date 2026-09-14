@@ -34,6 +34,14 @@ def device_info(context: DeviceContext) -> DeviceInfo:
     )
 
 
+def entity_available(context: DeviceContext, spec: EntitySpec) -> bool:
+    """Return availability using the product override when provided."""
+
+    if spec.availability is not None:
+        return spec.availability(context)
+    return context.available
+
+
 class AdapterEntityMixin:
     """Common lifecycle and state helpers for every generic HA platform."""
 
@@ -51,7 +59,7 @@ class AdapterEntityMixin:
 
     @property
     def available(self) -> bool:
-        return self._device_context.available
+        return entity_available(self._device_context, self._spec)
 
     def _state_value(self, key: str, default: Any = None) -> Any:
         return self._spec.state(self._device_context).get(key, default)
