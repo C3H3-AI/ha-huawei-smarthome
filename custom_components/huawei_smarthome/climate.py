@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.climate import ATTR_TEMPERATURE, ClimateEntity, ClimateEntityFeature, HVACMode
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -35,6 +36,10 @@ class HuaweiAdapterClimate(AdapterEntityMixin, ClimateEntity):
         self._attr_swing_modes = list(metadata.get("swing_modes", ()))
         self._attr_min_temp = metadata.get("min_temp")
         self._attr_max_temp = metadata.get("max_temp")
+        self._attr_temperature_unit = metadata.get(
+            "temperature_unit",
+            UnitOfTemperature.CELSIUS,
+        )
 
     @property
     def current_temperature(self): return self._state_value("current_temperature")
