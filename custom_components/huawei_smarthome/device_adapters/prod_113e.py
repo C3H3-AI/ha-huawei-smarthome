@@ -1,4 +1,4 @@
- """User-contributed protocol for Huawei product 113E (豪恩 中控主机 / 网关).
+"""User-contributed protocol for Huawei product 113E (豪恩 中控主机 / 网关).
 
 设备类型: 中控主机 (Bridge), 型号 T2
 用途: 作为 Zigbee 子设备网关; 内置夜灯可控制.
