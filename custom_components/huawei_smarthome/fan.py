@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity_helpers import device_info, iter_specs
+from .entity_helpers import device_info, entity_available, iter_specs
 
 
 async def async_setup_entry(
@@ -55,7 +55,7 @@ class HuaweiAdapterFan(FanEntity):
 
     @property
     def available(self) -> bool:
-        return self._device_context.available
+        return entity_available(self._device_context, self._spec)
 
     def _state(self, key: str, default: Any = None) -> Any:
         return self._spec.state(self._device_context).get(key, default)

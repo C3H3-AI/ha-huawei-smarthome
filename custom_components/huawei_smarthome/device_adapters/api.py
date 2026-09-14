@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 StateReader = Callable[["DeviceContext"], Mapping[str, Any]]
 EntityAction = Callable[["DeviceContext", Mapping[str, Any]], Awaitable[None]]
+AvailabilityReader = Callable[["DeviceContext"], bool]
 EventDecoder = Callable[
     ["DeviceContext", str, Mapping[str, Any], str | None],
     Iterable[tuple[str, Mapping[str, Any]]],
@@ -29,6 +30,7 @@ class EntitySpec:
     metadata: Mapping[str, Any] = field(default_factory=dict)
     actions: Mapping[str, EntityAction] = field(default_factory=dict)
     event_decoder: EventDecoder | None = None
+    availability: AvailabilityReader | None = None
 
 
 class HuaweiProductAdapter(Protocol):
