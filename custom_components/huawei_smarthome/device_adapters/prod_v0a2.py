@@ -218,6 +218,7 @@ def _now_playing(device: DeviceContext) -> Mapping[str, Any]:
                 "image": _image_url(meta),
                 "position": position,
                 "duration": duration,
+                "position_updated_at": device.service_updated_at(_VIDEO_PLAYER_SID),
             }
 
     if _player_active(_AUDIO_PLAYER_SID, device):
@@ -231,6 +232,7 @@ def _now_playing(device: DeviceContext) -> Mapping[str, Any]:
                 "image": _image_url(meta),
                 "position": _int_or_none(_value(device, _AUDIO_PLAYER_SID, "progress")),
                 "duration": _int_or_none(meta.get("duration")),
+                "position_updated_at": device.service_updated_at(_AUDIO_PLAYER_SID),
             }
     return {}
 
@@ -284,12 +286,20 @@ def _tv_state(device: DeviceContext) -> Mapping[str, Any]:
         "media_series_title": playing.get("series_title"),
         "media_episode": playing.get("episode"),
         # Position is the last pushed reading.  The TV reports it every few
-        # minutes, and the adapter API does not expose when that reading was
-        # taken, so ``media_position_updated_at`` is deliberately not set:
-        # without it HA shows the raw position rather than extrapolating a
-        # progress bar from a timestamp it cannot trust.
+        # minutes, so ``media_position_updated_at`` tells Home Assistant when
+        # that reading was taken and lets it extrapolate an accurate progress
+        # bar in between.
+        #
+        # It is set only when the device-reported timestamp parsed: the cloud
+        # sends the live ``ts`` with nine fractional digits
+        # ("20260914T222103156Z"), which ``parse_remote_timestamp`` does not
+        # accept (it expects six or fewer), so the call can legitimately return
+        # None.  Reporting None would tell Home Assistant the position was
+        # never updated, which is worse than omitting the attribute: without it
+        # HA shows the raw position, exactly as before this timestamp existed.
         "media_position": playing.get("position"),
         "media_duration": playing.get("duration"),
+        "media_position_updated_at": playing.get("position_updated_at"),
         "source": _value(device, _INPUT_SOURCE_SID, "name"),
     }
 

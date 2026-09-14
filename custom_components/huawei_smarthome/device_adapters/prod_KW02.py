@@ -14,10 +14,12 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable, Mapping
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .api import EntitySpec
 from .context import DeviceContext
+from ..domain.models import parse_remote_timestamp
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,6 +114,14 @@ _LPM_ACTIVE = 1
 # real "no alarm" reading, so it is surfaced as such instead of being dropped
 # as an unknown state, which is indistinguishable from missing data in the UI.
 _NO_ALARM = "无告警"
+
+# How long a latched ``lockAlarm`` reading keeps counting as current.  The
+# cloud raises the alarm once and never sends the cleared value, so without a
+# window a door reported ajar days ago would still read as an active alarm.
+# The value is a reporting bound rather than a measured duration: a door left
+# ajar genuinely is a standing condition, and the vendor app keeps showing it,
+# so the window is set wide enough that only clearly abandoned readings expire.
+_ALARM_PULSE_WINDOW = timedelta(hours=12)
 
 # doorBattery/level and catEyeBattery/level declare min = -1, which is not a
 # real percentage and is therefore projected as an unknown state.
@@ -304,9 +314,30 @@ def _alarm_spec(profile: Mapping[str, Any]) -> EntitySpec:
     lock_field = _field(profile, _LOCK_ALARM_SID, _LOCK_ALARM_FIELD) or {}
     door_field = _field(profile, _EVENT_SID, _DOOR_ALARM_PROFILE_FIELD) or {}
 
+    def _lock_alarm_is_stale(device: DeviceContext) -> bool:
+        """Report whether a ``lockAlarm`` reading is older than the pulse window.
+
+        ``lockAlarm`` latches: the lock raises it once and the cloud never sends
+        a cleared value, so a door that was reported ajar three days ago would
+        still read as an active alarm forever.
+
+        The age is only used when the device timestamp actually parsed.  A
+        failed parse is *not* evidence of staleness: the live MQTT ``ts``
+        carries nine fractional digits ("20260914T222103156Z"), which
+        ``parse_remote_timestamp`` rejects, so ``service_updated_at`` returns
+        None for every live push.  Treating that None as "old" would clear
+        genuinely current alarms -- the opposite of what this is for -- so an
+        unparsable timestamp keeps the previous latched behaviour.
+        """
+
+        when = device.service_updated_at(_LOCK_ALARM_SID)
+        if when is None:
+            return False
+        return datetime.now(timezone.utc) - when > _ALARM_PULSE_WINDOW
+
     def state(device: DeviceContext) -> Mapping[str, Any]:
         value = _number(device.value(_LOCK_ALARM_SID, _LOCK_ALARM_FIELD))
-        if value is not None and value >= 1:
+        if value is not None and value >= 1 and not _lock_alarm_is_stale(device):
             return {"native_value": _enum_label(lock_field, value) or str(value)}
         alarm = _number(_event_record(device).get(_DOOR_ALARM_FIELD))
         if alarm is not None and alarm >= 1:
@@ -829,7 +860,18 @@ def _reader_based_specs(context: DeviceContext) -> list[EntitySpec]:
 
     def last_action(device: DeviceContext) -> Mapping[str, Any]:
         value = device.value(_LAST_ACTION_SID, "time")
-        return {"native_value": value if isinstance(value, str) and value else None}
+        if not isinstance(value, str) or not value:
+            return {"native_value": None}
+        # The lock reports SmartHome stamps ("20260912T094645Z"), not ISO 8601.
+        # Parsing them lets the entity carry device_class=timestamp so Home
+        # Assistant renders a relative time ("3 hours ago") instead of the raw
+        # compact string.
+        #
+        # An unparsable stamp reports None rather than the raw text: the device
+        # class is fixed at construction, and HA rejects a non-timestamp value
+        # under it, so returning the string would surface "unknown" anyway --
+        # and a value HA cannot read is worse than an honest "no reading".
+        return {"native_value": parse_remote_timestamp(value)}
 
     return [
         EntitySpec(
@@ -849,10 +891,12 @@ def _reader_based_specs(context: DeviceContext) -> list[EntitySpec]:
             key="last_action_time",
             name="最近操作时间",
             state=last_action,
-            # The lock reports SmartHome stamps ("20260912T094645Z"), not ISO
-            # 8601, so device_class=timestamp is deliberately omitted: HA would
-            # reject the value and the entity would show unknown.
-            metadata={"entity_category": "diagnostic"},
+            # The state reader parses the SmartHome stamp
+            # ("20260912T094645Z") into a datetime, so the entity can carry
+            # device_class=timestamp and Home Assistant renders it as a
+            # relative time.  A stamp that does not parse reads as None rather
+            # than as a string HA would reject under this class.
+            metadata={"entity_category": "diagnostic", "device_class": "timestamp"},
         ),
     ]
 

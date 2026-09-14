@@ -61,6 +61,8 @@ class HuaweiAdapterMediaPlayer(AdapterEntityMixin, MediaPlayerEntity):
     @property
     def media_duration(self): return self._state_value("media_duration")
     @property
+    def media_position_updated_at(self): return self._state_value("media_position_updated_at")
+    @property
     def source(self): return self._state_value("source")
     @property
     def source_list(self): return self._state_value("source_list")
