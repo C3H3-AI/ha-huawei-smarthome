@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -17,11 +18,12 @@ from ..const import (
     HOME_SNAPSHOT_PATH,
     MESSAGE_CENTER_LOGIN_PATH,
     SCENE_BY_DEVICE_PATH,
-    SCENE_DETAIL_PATH,
+    SCENE_BASE_URL,
+    SCENE_DETAIL_V2_PATH,
     SCENE_ENABLED_PATH,
     SCENE_LIST_PATH,
     SCENE_LOGS_PATH,
-    SCENE_SIMULATE_PATH,
+    SCENE_RUN_EDGE_PATH,
     SCENE_TITLE_PATH,
     SCENE_TYPE_LABELS,
     SMART_HOME_IOS_APP_ID,
@@ -247,9 +249,11 @@ class SmartHomeDiscoveryApi:
     # ------------------------------------------------------------------
     # 场景（Home Automation）
     #
-    # ⚠️ 全部端点为**逆向推断，未实机验证**。来源：智慧生活 App 17.0.4.312 主体
-    # classes23.dex 反编译出的 com.huawei.hiscenario.service.network.NetworkService。
-    # 与设备发现接口同 host，故复用 _request 的认证/重试/错误处理。
+    # 端点路径最初为逆向推断，现已逐服务实测通过（2026-10-13，抓包校准）。
+    # 来源：智慧生活 App 17.0.4.312 主体 classes23.dex 反编译出的
+    # com.huawei.hiscenario.service.network.NetworkService。
+    # 场景 API 使用独立 host（SCENE_BASE_URL），故每次请求覆盖 base_url；
+    # 该 host 要求 x-uid（见 _request）。
     # ------------------------------------------------------------------
     async def async_list_scenes(
         self,
@@ -263,6 +267,7 @@ class SmartHomeDiscoveryApi:
             session,
             SCENE_LIST_PATH,
             params={"needCheck": str(need_check).lower()},
+            base_url=SCENE_BASE_URL,
         )
         return _as_mapping_tuple(scene_payload(self._json(response)))
 
@@ -277,7 +282,8 @@ class SmartHomeDiscoveryApi:
             raise ValueError("scenario_id is required")
         response = await self._request(
             session,
-            SCENE_DETAIL_PATH.format(scenario_id=quote(scenario_id, safe="")),
+            SCENE_DETAIL_V2_PATH.format(scenario_id=quote(scenario_id, safe="")),
+            base_url=SCENE_BASE_URL,
         )
         payload = scene_payload(self._json(response))
         return payload if isinstance(payload, Mapping) else {}
@@ -296,11 +302,13 @@ class SmartHomeDiscoveryApi:
         params: dict[str, str] = {"pageSize": str(page_size)}
         if cursor:
             params["cursor"] = cursor
-        if start_time:
-            params["startTime"] = start_time
-        if end_time:
-            params["endTime"] = end_time
-        response = await self._request(session, SCENE_LOGS_PATH, params=params)
+        # 服务端要求 startTime/endTime 必填（抓包验证，毫秒时间戳），缺省取最近 7 天。
+        now_ms = int(time.time() * 1000)
+        params["startTime"] = start_time or str(now_ms - 7 * 86400_000)
+        params["endTime"] = end_time or str(now_ms)
+        response = await self._request(
+            session, SCENE_LOGS_PATH, params=params, base_url=SCENE_BASE_URL
+        )
         payload = scene_payload(self._json(response))
         return payload if isinstance(payload, Mapping) else {}
 
@@ -317,6 +325,7 @@ class SmartHomeDiscoveryApi:
             session,
             SCENE_BY_DEVICE_PATH,
             params={"deviceId": device_id},
+            base_url=SCENE_BASE_URL,
         )
         return _as_mapping_tuple(scene_payload(self._json(response)))
 
@@ -325,16 +334,40 @@ class SmartHomeDiscoveryApi:
         session: AuthSession,
         scenario_id: str,
     ) -> Any:
-        """**手动执行**一次场景。"""
+        """**手动执行**一次场景。
+
+        抓包验证的 App 真实序列：GET detail 取 ``flow[0].id`` → POST
+        ``/v2/applications/{flowId}/edge``，body 里用 manualEvent 触发。
+        """
 
         if not scenario_id:
             raise ValueError("scenario_id is required")
+        detail = await self.async_get_scene_detail(session, scenario_id)
+        flow_id = _extract_flow_id(detail)
+        if not flow_id:
+            raise InvalidResponseError("scene detail has no flow id")
+        body = json.dumps(
+            {
+                "extension": {"scenarioId": scenario_id},
+                "inputParameter": {
+                    "method": "POST",
+                    "path": "/run",
+                    "body": {"eventType": "huawei.events.manualEvent"},
+                },
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
         response = await self._request(
             session,
-            SCENE_SIMULATE_PATH,
+            SCENE_RUN_EDGE_PATH.format(flow_id=quote(flow_id, safe="")),
             method="POST",
-            params={"scenarioId": scenario_id},
-            body=b"{}",
+            body=body,
+            base_url=SCENE_BASE_URL,
+            extra_headers={
+                "Content-Type": "application/json; charset=UTF-8",
+                "x-edge-path": "run",
+            },
         )
         return scene_payload(self._json(response))
 
@@ -357,6 +390,7 @@ class SmartHomeDiscoveryApi:
             SCENE_ENABLED_PATH,
             method="PUT",
             body=body,
+            base_url=SCENE_BASE_URL,
         )
         return scene_payload(self._json(response))
 
@@ -371,7 +405,8 @@ class SmartHomeDiscoveryApi:
         if not scenario_id:
             raise ValueError("scenario_id is required")
         body = json.dumps(
-            {"scenarioId": scenario_id, "title": title},
+            # SceneCard 字段名是 scenarioCardId（抓包+实测验证，scenarioId 会 400 must not be blank）
+            {"scenarioCardId": scenario_id, "title": title},
             ensure_ascii=False,
             separators=(",", ":"),
         ).encode("utf-8")
@@ -380,6 +415,7 @@ class SmartHomeDiscoveryApi:
             SCENE_TITLE_PATH,
             method="PUT",
             body=body,
+            base_url=SCENE_BASE_URL,
         )
         return scene_payload(self._json(response))
 
@@ -392,10 +428,11 @@ class SmartHomeDiscoveryApi:
         body: bytes | None = None,
         extra_headers: Mapping[str, str] | None = None,
         params: Mapping[str, str] | None = None,
+        base_url: str | None = None,
     ) -> HttpResponse:
         if not session.hms_access_token:
             raise AuthExpiredError("HMS-lite access token is unavailable")
-        origin = self._base_url or session.base_url
+        origin = base_url or self._base_url or session.base_url
         headers = {
             "Accept": "*/*",
             "Accept-Language": "zh-Hans-CN;q=1",
@@ -411,6 +448,9 @@ class SmartHomeDiscoveryApi:
             "X-RequestId": str(uuid.uuid4()).upper(),
             "User-Agent": SMART_HOME_USER_AGENT,
         }
+        if origin == SCENE_BASE_URL:
+            # 场景服务要求 x-uid（抓包验证：缺 x-uid 返回 401 errcode 1002）。
+            headers["x-uid"] = session.user_id
         if extra_headers:
             headers.update(extra_headers)
         if body is not None and "Content-Type" not in headers:
@@ -488,11 +528,26 @@ def _direct_error_code(value: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _extract_flow_id(detail: Any) -> str | None:
+    """从场景 detail 的 ``flow`` 列表取执行用 flow id（抓包验证）。"""
+
+    if not isinstance(detail, Mapping):
+        return None
+    flow = detail.get("flow")
+    if not isinstance(flow, Sequence) or isinstance(flow, (str, bytes)):
+        return None
+    for item in flow:
+        if isinstance(item, Mapping) and item.get("id"):
+            return str(item["id"])
+    return None
+
+
 def scene_payload(value: Any) -> Any:
     """Unwrap the HMS ``Submit<T>`` envelope used by /scenario-manager.
 
-    ⚠️ 逆向推断，未实机验证。``Submit<T>`` 的响应壳有两种形态（``payload`` /
-    ``data``），实参都在其中一层；``status`` 为 0 / 缺失视为成功。
+    实测（2026-10-13）：成功壳为 ``{"code":0,"message":"success",...}``，实参可能在
+    ``payload`` / ``data`` 层，也可能直接平铺（如 edge 执行返回 ``result:{}``）；
+    ``status`` / ``code`` 为 0、缺失或 200 视为成功，非 0 抛错。
     """
 
     if not isinstance(value, Mapping):
@@ -514,7 +569,7 @@ def _as_mapping_tuple(value: Any) -> tuple[Mapping[str, Any], ...]:
 
     if isinstance(value, Mapping):
         # 个别端点把列表塞在内层键里
-        for key in ("scenarios", "list", "items"):
+        for key in ("scenarios", "list", "items", "scenarioCards"):
             inner = value.get(key)
             if isinstance(inner, Sequence) and not isinstance(inner, (str, bytes)):
                 return tuple(item for item in inner if isinstance(item, Mapping))

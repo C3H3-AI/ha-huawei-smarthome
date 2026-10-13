@@ -1,6 +1,6 @@
 list_scenes:
   name: 列出场景
-  description: 列出华为智慧生活账号下的全部场景（逆向推断，未实机验证）
+  description: 列出华为智慧生活账号下的全部场景（已实测）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -13,7 +13,7 @@ list_scenes:
 
 scene_detail:
   name: 场景详情
-  description: 获取场景的触发器/条件/动作全量详情（逆向推断，未实机验证）
+  description: 获取场景的触发器/条件/动作全量详情（已实测）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -27,7 +27,7 @@ scene_detail:
 
 run_scene:
   name: 立即执行场景
-  description: ⚠️ 立即执行一次场景（逆向推断，未实机验证）
+  description: 立即执行一次场景（已实测）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -41,7 +41,7 @@ run_scene:
 
 scene_set_enabled:
   name: 启用/禁用场景
-  description: 启用或禁用某个场景（逆向推断，未实机验证）
+  description: 启用或禁用某个场景（已实测；手动场景不支持，服务端拒绝）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -60,7 +60,7 @@ scene_set_enabled:
 
 scene_rename:
   name: 重命名场景
-  description: 重命名场景标题（逆向推断，未实机验证）
+  description: 重命名场景标题（已实测）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -79,7 +79,7 @@ scene_rename:
 
 scene_logs:
   name: 场景执行日志
-  description: 分页查询场景执行日志（逆向推断，未实机验证）
+  description: 分页查询场景执行日志（已实测）
   fields:
     entry_id:
       name: 配置条目 ID
@@ -108,7 +108,7 @@ scene_logs:
 
 scenes_by_device:
   name: 按设备查场景
-  description: 按设备 deviceId 查询关联场景（逆向推断，未实机验证）
+  description: 按设备 deviceId 查询关联场景（已实测）
   fields:
     entry_id:
       name: 配置条目 ID

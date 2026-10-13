@@ -104,8 +104,16 @@ https://github.com/xiasi0/ha-huawei-smarthome
 
 所有服务均为响应型服务（`response_only`），`scenario_id` 从 `list_scenes` 的返回值中获取；配置了多个账号时可用 `entry_id` 指定。
 
-> [!WARNING]
-> 场景端点全部来自智慧生活 App（17.0.4.312）`com.huawei.hiscenario.service.network.NetworkService` 的反编译逆向推断，**尚未实机验证**。如调用返回非 0 状态，请附抓包反馈以便校准请求字段。
+> [!NOTE]
+> 场景端点最初来自智慧生活 App（17.0.4.312）`com.huawei.hiscenario.service.network.NetworkService` 的反编译逆向推断，现已在真实账号上**逐服务实测通过**（2026-10-13，配合 mitmproxy 抓包校准）。实测要点：
+>
+> - 认证需 `Authorization: Bearer {AT}` + `x-uid`（发 `X-Huid` 会 401 errcode 1002）
+> - `scene_detail` 走 **v2**（v1 已废弃，返回 90106 FGC application not exist）
+> - `scene_logs` 必填 `startTime`/`endTime`（毫秒时间戳），集成缺省补最近 7 天
+> - `scene_rename` body 字段为 **`scenarioCardId`**（写 `scenarioId` 会 400）
+> - `scene_set_enabled` 仅对 type 0/3 场景有效，手动场景（type=1）被服务端拒绝
+> - `run_scene` 按 App 真实序列：detail 取 `flow[0].id` → `POST /v2/applications/{flowId}/edge`（body 用 `huawei.events.manualEvent` 触发）
+> - `scenes_by_device` 响应列表位于 `scenarioCards` 键内
 
 ## 产品适配器贡献
 

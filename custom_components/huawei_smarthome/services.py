@@ -2,13 +2,11 @@
 
 目前只有一组：**智慧生活场景**（Home Automation）。
 
-⚠️ 全部端点为**逆向推断，未实机验证**。
+全部端点最初为逆向推断，现已逐服务实测通过（2026-10-13，mitmproxy 抓包校准）。
 来源：智慧生活 App 17.0.4.312 主体 ``classes23.dex`` 反编译出的
 ``com.huawei.hiscenario.service.network.NetworkService``（HMS ``Submit<T>`` 注解接口）。
-这些端点与本集成的设备发现接口同 host（``smarthome.hicloud.com``），
-认证同样走 HMS-lite access token。
-
-如果实机返回非 0 状态，请带上抓包反馈，字段名即可据此校准。
+场景 API 使用独立 host（``scenario-drcn.things.dbankcloud.cn``，非
+``smarthome.hicloud.com``），认证走 HMS-lite access token + ``x-uid``。
 """
 
 from __future__ import annotations
