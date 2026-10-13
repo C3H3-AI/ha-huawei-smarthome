@@ -88,6 +88,25 @@ https://github.com/xiasi0/ha-huawei-smarthome
 
 配置完成后，在 Huawei SmartHome 设备页面查看已创建的实体。实体由设备的产品适配器决定；没有适配器的产品不会显示实体。当前支持范围请以[已接入设备清单](docs/supported-devices.md)为准。
 
+## 场景服务（Home Automation）
+
+集成提供一组 HA 服务，用于操作华为智慧生活账号下的**自动化场景**（`/scenario-manager` 云端 API）：
+
+| 服务 | 说明 |
+| --- | --- |
+| `huawei_smarthome.list_scenes` | 列出账号下全部场景 |
+| `huawei_smarthome.scene_detail` | 获取场景的触发器/条件/动作详情 |
+| `huawei_smarthome.run_scene` | 立即执行一次场景 |
+| `huawei_smarthome.scene_set_enabled` | 启用/禁用场景 |
+| `huawei_smarthome.scene_rename` | 重命名场景 |
+| `huawei_smarthome.scene_logs` | 分页查询场景执行日志 |
+| `huawei_smarthome.scenes_by_device` | 按设备 ID 查询关联场景 |
+
+所有服务均为响应型服务（`response_only`），`scenario_id` 从 `list_scenes` 的返回值中获取；配置了多个账号时可用 `entry_id` 指定。
+
+> [!WARNING]
+> 场景端点全部来自智慧生活 App（17.0.4.312）`com.huawei.hiscenario.service.network.NetworkService` 的反编译逆向推断，**尚未实机验证**。如调用返回非 0 状态，请附抓包反馈以便校准请求字段。
+
 ## 产品适配器贡献
 
 欢迎拥有实际设备的用户贡献适配器。提交前请先检查[已接入设备清单](docs/supported-devices.md)，确认该 `prodId` 尚未接入。每个产品的适配器位于：

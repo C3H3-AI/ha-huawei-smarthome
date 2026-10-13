@@ -612,6 +612,11 @@ class HuaweiSmartHomeClient:
             self.session = session
             await self._discover(session)
 
+    async def async_get_session(self) -> AuthSession:
+        """Return a valid HMS session for ad-hoc cloud calls (e.g. scenes)."""
+
+        return await self._ensure_hms_session()
+
     async def _ensure_hms_session(self) -> AuthSession:
         if self.session_manager is None:
             session = await self.credentials.async_load(

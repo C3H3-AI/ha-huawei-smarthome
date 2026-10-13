@@ -55,5 +55,125 @@
         }
       }
     }
+  },
+  "services": {
+    "list_scenes": {
+      "name": "列出场景",
+      "description": "列出华为智慧生活账号下的全部场景（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "need_check": {
+          "name": "校验模式",
+          "description": ""
+        }
+      }
+    },
+    "scene_detail": {
+      "name": "场景详情",
+      "description": "获取场景的触发器/条件/动作全量详情（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "scenario_id": {
+          "name": "场景 ID",
+          "description": "从 list_scenes 返回值里取"
+        }
+      }
+    },
+    "run_scene": {
+      "name": "立即执行场景",
+      "description": "⚠️ 立即执行一次场景（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "scenario_id": {
+          "name": "场景 ID",
+          "description": "从 list_scenes 返回值里取"
+        }
+      }
+    },
+    "scene_set_enabled": {
+      "name": "启用/禁用场景",
+      "description": "启用或禁用某个场景（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "scenario_id": {
+          "name": "场景 ID",
+          "description": "从 list_scenes 返回值里取"
+        },
+        "enabled": {
+          "name": "是否启用",
+          "description": "true 启用 / false 禁用"
+        }
+      }
+    },
+    "scene_rename": {
+      "name": "重命名场景",
+      "description": "重命名场景标题（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "scenario_id": {
+          "name": "场景 ID",
+          "description": "从 list_scenes 返回值里取"
+        },
+        "title": {
+          "name": "新标题",
+          "description": "场景的新名称"
+        }
+      }
+    },
+    "scene_logs": {
+      "name": "场景执行日志",
+      "description": "分页查询场景执行日志（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "cursor": {
+          "name": "分页游标",
+          "description": "上次返回的游标，首页留空"
+        },
+        "page_size": {
+          "name": "每页条数",
+          "description": "默认 20"
+        },
+        "start_time": {
+          "name": "开始时间",
+          "description": "格式 YYYY-MM-DDTHH:MM:SSZ"
+        },
+        "end_time": {
+          "name": "结束时间",
+          "description": "格式 YYYY-MM-DDTHH:MM:SSZ"
+        }
+      }
+    },
+    "scenes_by_device": {
+      "name": "按设备查场景",
+      "description": "按设备 deviceId 查询关联场景（逆向推断，未实机验证）",
+      "fields": {
+        "entry_id": {
+          "name": "配置条目 ID",
+          "description": ""
+        },
+        "device_id": {
+          "name": "设备 ID",
+          "description": "华为 IoT 设备 ID"
+        }
+      }
+    }
   }
 }

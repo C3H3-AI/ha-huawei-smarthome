@@ -96,6 +96,9 @@ async def async_setup_entry(
         excluded_device_ids=client.excluded_device_ids,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    from .services import async_register_services
+
+    await async_register_services(hass)
     return True
 
 

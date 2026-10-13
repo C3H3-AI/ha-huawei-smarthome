@@ -39,6 +39,42 @@ MESSAGE_CENTER_LOGIN_PATH = "/message-center/v1/login"
 CLOUD_ROUTE_SELECT_PATH = "/trs/v1/app/route/select"
 HMS_LITE_TOKEN_PATH = "/smart-life/v2/hms-lite/token"
 
+# ---------------------------------------------------------------------------
+# 场景（Home Automation）
+#
+# ⚠️ 以下端点全部为**逆向推断，未实机验证**。
+# 来源：智慧生活 App 17.0.4.312 主体 classes23.dex 反编译出的
+# com.huawei.hiscenario.service.network.NetworkService（HMS ``Submit<T>`` 注解接口），
+# 同一 host（该接口里也有本集成在用的 /smart-life/v3/devices）。
+#
+# 该接口里 ``Submit<T>`` 的 ``T`` 是 HMS SDK 的响应壳，实参在 ``payload`` 字段，
+# 故统一走 scene_payload() 解包。
+# ---------------------------------------------------------------------------
+SCENE_BASE_PATH = "/scenario-manager"
+SCENE_LIST_PATH = f"{SCENE_BASE_PATH}/v3/scenarios"          # GET，App 当前主用
+SCENE_LIST_V2_PATH = f"{SCENE_BASE_PATH}/v2/scenarios"       # GET，兜底
+SCENE_DETAIL_PATH = f"{SCENE_BASE_PATH}/v1/scenarios/{{scenario_id}}"
+SCENE_DETAIL_V2_PATH = f"{SCENE_BASE_PATH}/v2/scenarios/{{scenario_id}}"
+SCENE_ENABLED_PATH = f"{SCENE_BASE_PATH}/v1/scenarios/enabled"      # PUT
+SCENE_TITLE_PATH = f"{SCENE_BASE_PATH}/v1/scenarios/title"          # PUT
+SCENE_BASIC_PATH = f"{SCENE_BASE_PATH}/v1/scenarios/basic"          # PUT
+SCENE_LOGS_PATH = f"{SCENE_BASE_PATH}/v3/scenarios/logs"            # GET，执行日志
+SCENE_SIMULATE_PATH = f"{SCENE_BASE_PATH}/v1/template/simulate"     # POST，手动执行
+SCENE_BY_DEVICE_PATH = f"{SCENE_BASE_PATH}/v3/scenariosByDeviceId"  # GET
+
+#: ``ScenarioBrief.type`` 取值（反编译自 hiscenario 常量）
+SCENE_TYPE_LABELS: dict[int, str] = {
+    0: "混合",
+    1: "手动",
+    2: "面板",
+    3: "自动",
+    4: "分隔线",
+    5: "AIGC",
+    7: "模拟点击",
+    8: "房间折叠",
+    9: "空间主题",
+}
+
 OBSERVED_MQTT_PORT = 8883
 OBSERVED_MQTT_SUBSCRIPTION_QOS = 2
 OBSERVED_MQTT_FILTER = "/smartHome/signaltrans/v2/categories/command"
